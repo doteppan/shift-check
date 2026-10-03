@@ -311,7 +311,7 @@ function renderStores(m){
 
 function render(){
   const m = DATA.months[cur];
-  $('#subtitle').textContent = `${cur.slice(0,4)}年${parseInt(cur.slice(5))}月 ・ 作成 ${m.generated} ・ パターン表 × ダイニー シフト表`;
+  $('#subtitle').textContent = `${cur.slice(0,4)}年${parseInt(cur.slice(5))}月 ・ 作成 ${m.generated} ・ パターン表 × ダイニー シフト表 × 勤務実績(前日分まで)`;
   renderTabs(); renderOverview(m); renderStores(m);
 }
 render();
