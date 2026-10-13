@@ -60,10 +60,16 @@ h2{font-size:15px;margin:28px 0 10px;color:var(--ink-2);font-weight:500;letter-s
 .pill.warn{background:var(--warn-soft);color:var(--warn)}
 .pill.mute{background:var(--surface-2);color:var(--ink-2)}
 section.store{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:14px}
-section.store .head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px 16px}
+/* 店舗見出しの固定(2026-10-13ユーザー依頼): 店名+トップへを高さ40pxのバーにして sticky、表の見出し行はその下(40px/62px)に固定 */
+section.store .head{position:sticky;top:0;z-index:4;display:flex;align-items:center;gap:12px;height:40px;box-sizing:border-box;margin:-16px -16px 0;padding:0 16px;background:var(--surface);border-bottom:1px solid var(--line-soft);border-radius:12px 12px 0 0}
+section.store .stats{margin-top:10px}
+section.store thead tr.grp th{top:40px}
+section.store thead tr.grp + tr th{top:62px}
+/* 1400px未満の画面では表が横にはみ出さないよう文字と余白を詰める */
+@media (max-width:1400px){section.store table{font-size:12px} section.store td,section.store th{padding-left:4px;padding-right:4px} td.ranges{min-width:118px;font-size:11px} td.cost small,td.cost div{font-size:11px}}
 section.store h3{margin:0;font-size:18px}
 html{scroll-behavior:smooth}
-section.store .head .totop{margin-left:auto;font-size:12px;color:var(--ink-2);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:3px 10px;white-space:nowrap;align-self:center}
+section.store .head .totop{margin-left:auto;font-size:12px;color:var(--ink-2);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:3px 10px;white-space:nowrap}
 section.store .head .totop:hover{background:var(--accent-soft);color:var(--ink)}
 #totop{position:fixed;right:18px;bottom:18px;z-index:8;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:10px 14px;font-size:13px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.12);display:none}
 #totop.show{display:block}
@@ -343,13 +349,13 @@ function renderStores(m){
     const sec = document.createElement('section'); sec.className='store'; sec.id='store-'+code;
     const blocks = st.blocks.map(b => `${b.daytype} ${b.hours}h/下限${fmtY(b.sales_hi)}`).join(' ・ ');
     chartDays[code] = st.days;
-    let head = `<div class="head"><h3>${esc(st.name)}</h3><div class="stats">`;
+    let head = `<div class="head"><h3>${esc(st.name)}</h3>${TOTOP}</div><div class="stats">`;
     head += `<span>パターン 下限売上計 <b>${fmtY(salesSum(st.days))}</b></span>`;
     if (s.made.length){
       head += `<span class="grp make"><span class="band make">作成時</span><span>作成 <b>${s.made.length}</b>日</span><span>超過日 <b>${s.over.length}</b></span><span>合計差 <b>${fmtD(s.act-s.pat)}</b></span><span>過剰人時 <b>${fmtH(s.overH)}</b></span><span>募集枠 <b>${fmtH(s.rec)}</b></span><span>予算計 <b>${fmtY(st.days.reduce((a,d)=>a+(d.budget||0),0))}</b></span></span>`;
       if (s.real.length) head += `<span class="grp real"><span class="band real">営業終了後</span><span>実績 <b>${s.real.length}</b>日</span><span>実績−パターン <b>${fmtD(s.realH-s.realPat)}</b></span><span>実績−作成 <b>${fmtD(s.realHs-s.realShift)}</b></span><span>実績超過日 <b>${s.realOverDays.length}</b></span><span>人件費差 <b>${fmtYD(s.realCost-s.realPatCost)}</b></span><span>率 実績 <b>${fmtP(s.realRate)}</b> / パターン <b>${fmtP(s.realPatRate)}</b></span><span>25.2%基準 超過 <b>${kijunFull(s.realCost, s.realSales, s.realH)}</b></span><span>売上実績計 <b style="color:var(--bar-real)">${fmtY(s.realSales)}</b>(同期間の下限計 ${fmtY(s.realPatSales)})</span></span>`;
     } else head += '<span>この月のシフトは未作成</span>';
-    head += `</div>${TOTOP}</div><div class="note">パターン: ${esc(blocks)}</div>`;
+    head += `</div><div class="note">パターン: ${esc(blocks)}</div>`;
     const vers = st.pattern_versions_in_month || [];
     if (vers.length > 1) head += `<div class="note"><span class="pill warn">パターン変更あり</span> ${vers.slice(1).map(v => v.replace(/^\d+-0?(\d+)-0?(\d+)$/, '$1/$2') + '以降は新パターンで判定').join('、')}(それ以前は変更前のパターン)</div>`;
     let body = '';
@@ -429,12 +435,12 @@ function renderWeekly(){
   DATA.order.forEach(code => {
     const r = w.stores[code]; if(!r) return;
     const sec = document.createElement('section'); sec.className = 'store'; sec.id = 'wk-'+code;
-    let h = `<div class="head"><h3>${esc(r.name)} ${wkPill(r)}</h3><div class="stats">`;
+    let h = `<div class="head"><h3>${esc(r.name)} ${wkPill(r)}</h3>${TOTOP}</div><div class="stats">`;
     const dd = r.days.filter(Boolean);
     h += `<span>パターン <b>${fmtH(r.n_created?r.pattern_h:r.pattern_h_all)}</b></span><span>下限売上計 <b>${fmtY(salesSum(dd))}</b></span>`;
     if (r.n_created) h += `<span class="grp make"><span class="band make">作成時</span><span>作成 <b>${fmtH(r.actual_h)}</b></span><span>差 <b style="color:${dcol(r.diff_h)}">${fmtD(r.diff_h)}</b></span><span>超過日 <b>${r.over_days.length}</b></span><span>予算計 <b>${fmtY(dd.reduce((a,d)=>a+(d.budget||0),0))}</b></span></span>`;
     if (r.n_real) h += `<span class="grp real"><span class="band real">営業終了後</span><span>実績 <b>${fmtH(r.real_h)}</b>(${r.n_real}日)</span><span>実績−パターン <b style="color:${dcol(r.real_h-r.real_pattern_h)}">${fmtD(r.real_h-r.real_pattern_h)}</b></span><span>人件費率 実績 <b>${fmtP(r.real_rate)}</b> / パターン <b>${fmtP(r.real_pattern_rate)}</b></span><span>25.2%基準 超過 <b>${kijunFull(r.real_cost, r.real_sales, r.real_h)}</b></span><span>売上実績計 <b style="color:var(--bar-real)">${fmtY(r.real_sales)}</b>(同期間の下限計 ${fmtY(salesSum(dd, d=>d.has_real))})</span></span>`;
-    h += `</div>${TOTOP}</div>`;
+    h += '</div>';
     const showReal = r.n_real > 0;
     const cdays = r.days.filter(Boolean);
     chartDays[code] = cdays;
