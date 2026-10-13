@@ -129,6 +129,9 @@ thead tr.grp + tr th.real{box-shadow:inset 3px 0 0 var(--real-soft),0 1px 0 var(
 .gcard .name b{font-size:15px}
 .gcard .name small{color:var(--ink-3)}
 .gtag{margin-left:6px}
+body[data-view="simple"] .dt{display:none}
+body[data-view="simple"] section.store table{width:auto;min-width:70%}  /* 簡易表示は列が少ないので幅いっぱいに広げない */
+.viewtoggle{margin-left:auto;display:inline-flex;align-items:center;gap:6px}
 
 .kv .full{grid-column:1/-1;display:flex;justify-content:space-between;gap:8px}
 
@@ -190,8 +193,8 @@ details summary{cursor:pointer;color:var(--accent);font-size:13px;margin-top:8px
 
   <h2 id="h2b">店舗別の日次チェック(パターン × 作成シフト × 勤務実績)</h2>
   <div id="stores"></div>
-  <p class="note">勤務実績: ダイニー従業員別ページ(店舗別人件費詳細)の出勤〜退勤(在席時間)を30分枠に置いてパターンと比較。人件費: パ=パターン表の人件費(率はパターン売上予測に対して)、作=ダイニーシフト表の予定人件費(率は売上予算に対して)、実=従業員別ページの給与額−通勤費=Laborシートの確定値(率は売上実績・税抜に対して)。前日分までを毎朝更新。<b>25.2%基準</b>: 売上実績(税抜)×25.2%(社内管理基準の人件費率)を人件費の枠とし、実績人件費との差を実績の平均時給(実績人件費÷実績時間)で時間に換算。+は枠を超えた時間、−は枠内の余裕。</p>
-  <p class="note">パターン表の売上は「最低売上でQSCを担保する最低人員配置」の前提となる下限値です。ダイニー売上予算がこの下限を下回る日は「下限割れ」(最低配置のままでも人件費率が想定を超える)として表示します。売上実績レビューは日別Sales Laborタブ(税抜・デリバリー除く)の直近28日で、実績が下限を下回り続ける区分を「見直し候補」にしています。</p>
+  <p class="note dt">勤務実績: ダイニー従業員別ページ(店舗別人件費詳細)の出勤〜退勤(在席時間)を30分枠に置いてパターンと比較。人件費: パ=パターン表の人件費(率はパターン売上予測に対して)、作=ダイニーシフト表の予定人件費(率は売上予算に対して)、実=従業員別ページの給与額−通勤費=Laborシートの確定値(率は売上実績・税抜に対して)。前日分までを毎朝更新。<b>25.2%基準</b>: 売上実績(税抜)×25.2%(社内管理基準の人件費率)を人件費の枠とし、実績人件費との差を実績の平均時給(実績人件費÷実績時間)で時間に換算。+は枠を超えた時間、−は枠内の余裕。</p>
+  <p class="note dt">パターン表の売上は「最低売上でQSCを担保する最低人員配置」の前提となる下限値です。ダイニー売上予算がこの下限を下回る日は「下限割れ」(最低配置のままでも人件費率が想定を超える)として表示します。売上実績レビューは日別Sales Laborタブ(税抜・デリバリー除く)の直近28日で、実績が下限を下回り続ける区分を「見直し候補」にしています。</p>
 </div>
 <div class="tip" id="tip"></div>
 <button id="totop" type="button" title="ページ先頭(店舗サマリー)へ戻る">↑ トップへ</button>
@@ -214,6 +217,9 @@ try { const s = localStorage.getItem('shiftcheck.month'); if (s && (DATA.months[
 let wk = 'next';
 try { const s = localStorage.getItem('shiftcheck.week'); if (s && DATA.weekly && DATA.weekly.weeks[s]) wk = s; } catch(e){}
 
+let view = 'simple';  // 簡易表示(既定)/詳細表示(すべての列・数字)。2026-10-13ユーザー依頼「情報量が多いので見やすく、戻せるように」
+try { const v = localStorage.getItem('shiftcheck.view'); if (v === 'detail' || v === 'simple') view = v; } catch(e){}
+const D = () => view === 'detail';
 let scheme = 'all', grp = 'all';
 try { const a = localStorage.getItem('shiftcheck.scheme'); if (a) scheme = a; const b = localStorage.getItem('shiftcheck.group'); if (b) grp = b; } catch(e){}
 const SCHEMES = (DATA.groups && DATA.groups.schemes) || [];
@@ -242,18 +248,21 @@ function visibleCodes(ctx){
 function groupTag(code, ctx){ const sc = currentScheme(); if (!sc) return ''; const g = schemeGroups(sc, ctx).find(x => x.stores.includes(code)); return g ? `<span class="band base gtag">${esc(g.name)}</span>` : ''; }
 function renderGroupBar(ctx){
   const bar = $('#groupbar'); bar.innerHTML = '';
-  if (!SCHEMES.length) return;
-  let h = `<span class="lbl">グループ</span><select id="schemesel"><option value="all">全店(グループなし)</option>${SCHEMES.map(x => `<option value="${x.id}" ${x.id===scheme?'selected':''}>${esc(x.name)}</option>`).join('')}</select>`;
+  document.body.dataset.view = view;
+  let h = SCHEMES.length ? `<span class="lbl">グループ</span>` : '';
+  if (SCHEMES.length) h += `<select id="schemesel"><option value="all">全店(グループなし)</option>${SCHEMES.map(x => `<option value="${x.id}" ${x.id===scheme?'selected':''}>${esc(x.name)}</option>`).join('')}</select>`;
   const sc = currentScheme();
   if (sc){
     const gs = schemeGroups(sc, ctx);
     h += `<button class="chip" aria-selected="${grp==='all'}" data-g="all">全グループ</button>` + gs.map(g => `<button class="chip" aria-selected="${grp===g.name}" data-g="${esc(g.name)}">${esc(g.name)} <small>${g.stores.length}店</small></button>`).join('');
     if (sc.note) h += `<span class="lbl">※${esc(sc.note)}</span>`;
   }
+  h += `<span class="viewtoggle"><span class="lbl">表示</span><button class="chip" aria-selected="${view==='simple'}" data-v="simple">簡易</button><button class="chip" aria-selected="${view==='detail'}" data-v="detail">詳細(すべて)</button></span>`;
   bar.innerHTML = h;
+  bar.querySelectorAll('.viewtoggle .chip').forEach(b => b.onclick = () => { view = b.dataset.v; try{localStorage.setItem('shiftcheck.view', view)}catch(e){}; render(); });
   const save = () => { try{ localStorage.setItem('shiftcheck.scheme', scheme); localStorage.setItem('shiftcheck.group', grp); }catch(e){} };
-  $('#schemesel').onchange = e => { scheme = e.target.value; grp = 'all'; save(); render(); };
-  bar.querySelectorAll('.chip').forEach(b => b.onclick = () => { grp = b.dataset.g; save(); render(); });
+  if ($('#schemesel')) $('#schemesel').onchange = e => { scheme = e.target.value; grp = 'all'; save(); render(); };
+  bar.querySelectorAll('.chip[data-g]').forEach(b => b.onclick = () => { grp = b.dataset.g; save(); render(); });
 }
 function aggStores(codes, ctx){
   const a = {n:0, made:0, pat:0, act:0, overDays:0, realH:0, realPat:0, realCost:0, realSales:0, realPatSales:0, realDays:0, budget:0, patSales:0};
@@ -280,10 +289,10 @@ function groupSummaryHtml(ctx){
     const a = aggStores(g.stores, ctx);
     const names = g.stores.map(c => ((ctx.kind==='weekly' ? ctx.w.stores[c] : ctx.m.stores[c]) || {}).name || c).join('・');
     h += `<div class="gcard"><div class="name"><b>${esc(g.name)}</b><small>${a.n}店: ${esc(names)}</small><small style="margin-left:auto">グループ合計</small></div><div class="stats">`;
-    if (a.made) h += `<span class="grp make"><span class="band make">作成時</span><span>パターン <b>${fmtH(a.pat)}</b></span><span>作成 <b>${fmtH(a.act)}</b></span><span>差 <b style="color:${dcol(a.act-a.pat)}">${fmtD(a.act-a.pat)}</b></span><span>超過日 計 <b>${a.overDays}</b></span><span>予算計 <b>${fmtY(a.budget)}</b></span></span>`;
+    if (a.made) h += `<span class="grp make"><span class="band make">作成時</span><span>パターン <b>${fmtH(a.pat)}</b></span><span>作成 <b>${fmtH(a.act)}</b></span><span>差 <b style="color:${dcol(a.act-a.pat)}">${fmtD(a.act-a.pat)}</b></span><span>超過日 計 <b>${a.overDays}</b></span>${D()?`<span>予算計 <b>${fmtY(a.budget)}</b></span>`:''}</span>`;
     else h += '<span>作成シフトなし</span>';
     if (a.realDays){ const rate = a.realSales ? a.realCost/a.realSales*100 : null;
-      h += `<span class="grp real"><span class="band real">営業終了後</span><span>実績 <b>${fmtH(a.realH)}</b></span><span>実績−パターン <b style="color:${dcol(a.realH-a.realPat)}">${fmtD(a.realH-a.realPat)}</b></span><span>実績人件費 <b>${fmtY(a.realCost)}</b>(${fmtP(rate)})</span><span>25.2%基準 超過 <b>${kijunFull(a.realCost, a.realSales, a.realH)}</b></span><span>売上実績 <b style="color:var(--bar-real)">${fmtY(a.realSales)}</b> / 下限 ${fmtY(a.realPatSales)}</span></span>`; }
+      h += `<span class="grp real"><span class="band real">営業終了後</span><span>実績 <b>${fmtH(a.realH)}</b></span><span>実績−パターン <b style="color:${dcol(a.realH-a.realPat)}">${fmtD(a.realH-a.realPat)}</b></span><span>実績人件費 <b>${fmtY(a.realCost)}</b>(${fmtP(rate)})</span><span>25.2%基準 超過 <b>${D()?kijunFull(a.realCost, a.realSales, a.realH):fmtKH(a.realCost, a.realSales, a.realH)}</b></span>${D()?`<span>売上実績 <b style="color:var(--bar-real)">${fmtY(a.realSales)}</b> / 下限 ${fmtY(a.realPatSales)}</span>`:''}</span>`; }
     h += '</div></div>';
   });
   return h + '</div>';
@@ -348,18 +357,18 @@ function renderOverview(m){
       <div class="kv">
         <span class="kvband"><span class="band make">作成時に確認</span></span>
         <span>作成 − パターン(合計)</span><b>${s.made.length ? fmtD(s.act - s.pat) : '-'}</b>
-        <span>時間帯の過剰(人時)</span><b>${s.made.length ? fmtH(s.overH) : '-'}</b>
+        ${D()?`<span>時間帯の過剰(人時)</span><b>${s.made.length ? fmtH(s.overH) : '-'}</b>
         <span>うち募集枠</span><b>${s.made.length ? fmtH(s.rec) : '-'}</b>
         <span>作成シフトの予定人件費率</span><b>${s.made.length && s.shiftRate!=null ? fmtP(s.shiftRate) : '-'}</b>
-        <span>売上予算がパターン下限割れ</span><b>${s.budget.length ? s.bflag.length + '/' + s.budget.length + '日' : '-'}</b>
+        <span>売上予算がパターン下限割れ</span><b>${s.budget.length ? s.bflag.length + '/' + s.budget.length + '日' : '-'}</b>`:''}
         <span class="kvband"><span class="band real">営業終了後に確認</span><small style="color:var(--ink-3);margin-left:6px">実績${s.real.length}日分</small></span>
         <span>実績 − パターン</span><b>${s.real.length ? fmtD(s.realH - s.realPat) : '-'}</b>
-        <span>実績 − 作成シフト</span><b>${s.real.length ? fmtD(s.realHs - s.realShift) : '-'}</b>
-        <span>実績人件費 − パターン人件費</span><b>${s.real.length ? fmtYD(s.realCost - s.realPatCost) : '-'}</b>
+        ${D()?`<span>実績 − 作成シフト</span><b>${s.real.length ? fmtD(s.realHs - s.realShift) : '-'}</b>
+        <span>実績人件費 − パターン人件費</span><b>${s.real.length ? fmtYD(s.realCost - s.realPatCost) : '-'}</b>`:''}
         <span class="full"><span>25.2%基準からの超過(差額 ÷ 平均時給)</span><b style="white-space:nowrap;color:${s.realKH!=null?dcol(s.realKH):'inherit'}">${s.realKH!=null ? fmtD(s.realKH) : '-'}</b></span>
-        ${s.realKH!=null ? `<span class="full" style="color:var(--ink-3);font-size:12px;justify-content:flex-end">${kijunNote(s.realCost, s.realSales, s.realH)}</span>` : ''}
+        ${D()&&s.realKH!=null ? `<span class="full" style="color:var(--ink-3);font-size:12px;justify-content:flex-end">${kijunNote(s.realCost, s.realSales, s.realH)}</span>` : ''}
         <span>人件費率 実績 / パターン</span><b>${s.real.length ? fmtP(s.realRate) + ' / ' + fmtP(s.realPatRate) : '-'}</b>
-        <span class="full"><span>売上 実績 / 下限(同期間)</span><b style="white-space:nowrap">${s.real.length ? fmtY(s.realSales) + ' / ' + fmtY(s.realPatSales) : '-'}</b></span>
+        ${D()?`<span class="full"><span>売上 実績 / 下限(同期間)</span><b style="white-space:nowrap">${s.real.length ? fmtY(s.realSales) + ' / ' + fmtY(s.realPatSales) : '-'}</b></span>`:''}
       </div>`;
     g.appendChild(el);
   });
@@ -448,18 +457,18 @@ function renderStores(m){
     const blocks = st.blocks.map(b => `${b.daytype} ${b.hours}h/下限${fmtY(b.sales_hi)}`).join(' ・ ');
     chartDays[code] = st.days;
     let head = `<div class="head"><h3>${esc(st.name)}</h3>${groupTag(code, ctx)}${TOTOP}</div><div class="stats">`;
-    head += `<span>パターン 下限売上計 <b>${fmtY(salesSum(st.days))}</b></span>`;
+    if (D()) head += `<span>パターン 下限売上計 <b>${fmtY(salesSum(st.days))}</b></span>`;
     if (s.made.length){
-      head += `<span class="grp make"><span class="band make">作成時</span><span>作成 <b>${s.made.length}</b>日</span><span>超過日 <b>${s.over.length}</b></span><span>合計差 <b>${fmtD(s.act-s.pat)}</b></span><span>過剰人時 <b>${fmtH(s.overH)}</b></span><span>募集枠 <b>${fmtH(s.rec)}</b></span><span>予算計 <b>${fmtY(st.days.reduce((a,d)=>a+(d.budget||0),0))}</b></span></span>`;
-      if (s.real.length) head += `<span class="grp real"><span class="band real">営業終了後</span><span>実績 <b>${s.real.length}</b>日</span><span>実績−パターン <b>${fmtD(s.realH-s.realPat)}</b></span><span>実績−作成 <b>${fmtD(s.realHs-s.realShift)}</b></span><span>実績超過日 <b>${s.realOverDays.length}</b></span><span>人件費差 <b>${fmtYD(s.realCost-s.realPatCost)}</b></span><span>率 実績 <b>${fmtP(s.realRate)}</b> / パターン <b>${fmtP(s.realPatRate)}</b></span><span>25.2%基準 超過 <b>${kijunFull(s.realCost, s.realSales, s.realH)}</b></span><span>売上実績計 <b style="color:var(--bar-real)">${fmtY(s.realSales)}</b>(同期間の下限計 ${fmtY(s.realPatSales)})</span></span>`;
+      head += `<span class="grp make"><span class="band make">作成時</span><span>作成 <b>${s.made.length}</b>日</span><span>超過日 <b>${s.over.length}</b></span><span>合計差 <b>${fmtD(s.act-s.pat)}</b></span>${D()?`<span>過剰人時 <b>${fmtH(s.overH)}</b></span><span>募集枠 <b>${fmtH(s.rec)}</b></span><span>予算計 <b>${fmtY(st.days.reduce((a,d)=>a+(d.budget||0),0))}</b></span>`:''}</span>`;
+      if (s.real.length) head += `<span class="grp real"><span class="band real">営業終了後</span><span>実績 <b>${s.real.length}</b>日</span><span>実績−パターン <b>${fmtD(s.realH-s.realPat)}</b></span>${D()?`<span>実績−作成 <b>${fmtD(s.realHs-s.realShift)}</b></span><span>実績超過日 <b>${s.realOverDays.length}</b></span><span>人件費差 <b>${fmtYD(s.realCost-s.realPatCost)}</b></span>`:''}<span>率 実績 <b>${fmtP(s.realRate)}</b> / パターン <b>${fmtP(s.realPatRate)}</b></span><span>25.2%基準 超過 <b>${D()?kijunFull(s.realCost, s.realSales, s.realH):fmtKH(s.realCost, s.realSales, s.realH)}</b></span>${D()?`<span>売上実績計 <b style="color:var(--bar-real)">${fmtY(s.realSales)}</b>(同期間の下限計 ${fmtY(s.realPatSales)})</span>`:''}</span>`;
     } else head += '<span>この月のシフトは未作成</span>';
-    head += `</div><div class="note">パターン: ${esc(blocks)}</div>`;
+    head += `</div>${D()?`<div class="note">パターン: ${esc(blocks)}</div>`:''}`;
     const vers = st.pattern_versions_in_month || [];
     if (vers.length > 1) head += `<div class="note"><span class="pill warn">パターン変更あり</span> ${vers.slice(1).map(v => v.replace(/^\d+-0?(\d+)-0?(\d+)$/, '$1/$2') + '以降は新パターンで判定').join('、')}(それ以前は変更前のパターン)</div>`;
     let body = '';
     if (s.made.length){
       body += `<div class="chart" data-code="${code}">${chart(st)}</div>`;
-      body += `<div class="tablewrap"><table><thead><tr class="grp"><th colspan="4" class="base">基準(パターン)</th><th colspan="4" class="make">作成時に確認 ― 作成シフト × パターン</th><th colspan="5" class="real">営業終了後に確認 ― 勤務実績 × パターン × 作成</th></tr><tr><th>日</th><th>区分</th><th class="n">パターン</th><th class="n">パターン人件費(率)<br>下限売上</th><th class="n make">作成</th><th class="n">作成−パターン</th><th>過剰 / 不足の時間帯(作成)</th><th class="n">作成予定人件費(率)<br>売上予算</th><th class="n real">実績</th><th class="n">実績−パターン</th><th class="n">実績−作成</th><th>過剰 / 不足の時間帯(実績)</th><th class="n">実績人件費(率)・25.2%比<br>売上実績</th></tr></thead><tbody>`;
+      body += `<div class="tablewrap"><table><thead><tr class="grp"><th colspan="${D()?4:3}" class="base">基準(パターン)</th><th colspan="${D()?4:2}" class="make">作成時に確認 ― 作成シフト × パターン</th><th colspan="${D()?5:3}" class="real">営業終了後に確認 ― 勤務実績 × パターン × 作成</th></tr><tr><th>日</th><th>区分</th><th class="n">パターン</th>${D()?'<th class="n">パターン人件費(率)<br>下限売上</th>':''}<th class="n make">作成</th><th class="n">作成−パターン</th>${D()?'<th>過剰 / 不足の時間帯(作成)</th><th class="n">作成予定人件費(率)<br>売上予算</th>':''}<th class="n real">実績</th><th class="n">実績−パターン</th>${D()?'<th class="n">実績−作成</th><th>過剰 / 不足の時間帯(実績)</th>':''}<th class="n">実績人件費(率)・25.2%比${D()?'<br>売上実績':''}</th></tr></thead><tbody>`;
       st.days.forEach(d => {
         const cls = !d.has_shift ? 'none' : d.diff_h > 0 ? 'over' : d.diff_h < 0 ? 'under' : '';
         const rc = d.has_real ? d.real_cost_detail : null;
@@ -469,13 +478,13 @@ function renderStores(m){
         let realCell = '—';
         if (d.has_real){
           realCell = `<div style="${nw};font-weight:600">${fmtY(rc)} <small style="color:var(--ink-3);font-weight:400">(${fmtP(d.real_rate)})</small></div>`;
-          if (rc!=null && d.pattern_cost!=null) realCell += `<div style="${nw}"><span style="color:${dcol(rc-d.pattern_cost)}">${fmtYD(rc-d.pattern_cost)}</span>${d.real_rate!=null&&d.pattern_rate!=null?` <span style="color:${dcol(d.real_rate-d.pattern_rate)}">${fmtPD(d.real_rate-d.pattern_rate)}</span>`:''}</div>`;
+          if (D() && rc!=null && d.pattern_cost!=null) realCell += `<div style="${nw}"><span style="color:${dcol(rc-d.pattern_cost)}">${fmtYD(rc-d.pattern_cost)}</span>${d.real_rate!=null&&d.pattern_rate!=null?` <span style="color:${dcol(d.real_rate-d.pattern_rate)}">${fmtPD(d.real_rate-d.pattern_rate)}</span>`:''}</div>`;
           if (kijunH(rc, d.real_sales, d.real_h)!=null) realCell += `<div style="${nw}">25.2%比 ${fmtKH(rc, d.real_sales, d.real_h)}</div>`;
-          realCell += `<div style="${nw};color:var(--bar-real);font-weight:600">売上 ${fmtY(d.real_sales)}</div>`;
+          if (D()) realCell += `<div style="${nw};color:var(--bar-real);font-weight:600">売上 ${fmtY(d.real_sales)}</div>`;
         }
-        body += `<tr class="${cls}"><td>${d.day}(${d.wd}${d.holiday?'祝':''})</td><td>${d.pattern_daytype}</td><td class="n">${fmtH(d.pattern_h)}</td><td class="n cost">${patCell}</td>`
-          + `<td class="n make">${d.has_shift?fmtH(d.actual_h):'—'}${d.recruit_h?`<br><small style="color:var(--ink-3)">募集 ${fmtH(d.recruit_h)}</small>`:''}</td><td class="n" style="color:${dcol(d.diff_h)}">${d.has_shift?fmtD(d.diff_h):'—'}</td><td class="ranges">${d.has_shift?rangesHtml(d):'—'}</td><td class="n cost">${makeCell}</td>`
-          + `<td class="n real" style="color:var(--bar-real)">${d.has_real?fmtH(d.real_h):'—'}</td><td class="n" style="color:${d.has_real?dcol(d.real_diff_h):'inherit'}">${d.has_real?fmtD(d.real_diff_h):'—'}</td><td class="n" style="color:${d.real_vs_shift_h!=null?dcol(d.real_vs_shift_h):'inherit'}">${d.real_vs_shift_h!=null?fmtD(d.real_vs_shift_h):'—'}</td><td class="ranges">${d.has_real?rangesHtml(d,true):'—'}</td><td class="n cost">${realCell}</td></tr>`;
+        body += `<tr class="${cls}"><td>${d.day}(${d.wd}${d.holiday?'祝':''})</td><td>${d.pattern_daytype}</td><td class="n">${fmtH(d.pattern_h)}</td>${D()?`<td class="n cost">${patCell}</td>`:''}`
+          + `<td class="n make">${d.has_shift?fmtH(d.actual_h):'—'}${d.recruit_h?`<br><small style="color:var(--ink-3)">募集 ${fmtH(d.recruit_h)}</small>`:''}</td><td class="n" style="color:${dcol(d.diff_h)}">${d.has_shift?fmtD(d.diff_h):'—'}</td>${D()?`<td class="ranges">${d.has_shift?rangesHtml(d):'—'}</td><td class="n cost">${makeCell}</td>`:''}`
+          + `<td class="n real" style="color:var(--bar-real)">${d.has_real?fmtH(d.real_h):'—'}</td><td class="n" style="color:${d.has_real?dcol(d.real_diff_h):'inherit'}">${d.has_real?fmtD(d.real_diff_h):'—'}</td>${D()?`<td class="n" style="color:${d.real_vs_shift_h!=null?dcol(d.real_vs_shift_h):'inherit'}">${d.real_vs_shift_h!=null?fmtD(d.real_vs_shift_h):'—'}</td><td class="ranges">${d.has_real?rangesHtml(d,true):'—'}</td>`:''}<td class="n cost">${realCell}</td></tr>`;
       });
       body += '</tbody></table></div>';
     } else if (s.budget.length){
@@ -513,16 +522,16 @@ function renderWeekly(){
   const hasReal = Object.values(w.stores).some(r => r.n_real > 0);
   const ctx = {kind:'weekly', w};
   renderGroupBar(ctx);
-  let t = `<div class="wktable"><div class="tablewrap scrollx" style="margin-top:0"><table><thead><tr class="grp"><th class="base"></th><th colspan="9" class="make">作成時に確認 ― 作成シフト × パターン</th>${hasReal?'<th colspan="7" class="real">営業終了後に確認 ― 勤務実績 × パターン × 作成</th>':''}</tr><tr><th>店舗</th><th class="make">判定(作成×パターン)</th><th class="n">作成</th><th class="n">パターン</th><th class="n">作成シフト</th><th class="n">差</th><th class="n">超過日</th><th class="n">時間帯の過剰</th><th class="n">予定人件費(予算比)</th><th class="n">売上 下限計 / 予算計</th>`;
-  if (hasReal) t += `<th class="n real">実績日数</th><th class="n">実績</th><th class="n">実績−作成</th><th class="n">実績−パターン</th><th class="n">実績人件費(率)</th><th class="n">25.2%基準 超過<br>差額 ÷ 平均時給</th><th class="n">売上 実績 / 下限(実績日分)</th>`;
+  let t = `<div class="wktable"><div class="tablewrap scrollx" style="margin-top:0"><table><thead><tr class="grp"><th class="base"></th><th colspan="${D()?9:5}" class="make">作成時に確認 ― 作成シフト × パターン</th>${hasReal?`<th colspan="${D()?7:4}" class="real">営業終了後に確認 ― 勤務実績 × パターン × 作成</th>`:''}</tr><tr><th>店舗</th><th class="make">判定(作成×パターン)</th>${D()?'<th class="n">作成</th>':''}<th class="n">パターン</th><th class="n">作成シフト</th><th class="n">差</th><th class="n">超過日</th>${D()?'<th class="n">時間帯の過剰</th><th class="n">予定人件費(予算比)</th><th class="n">売上 下限計 / 予算計</th>':''}`;
+  if (hasReal) t += `${D()?'<th class="n real">実績日数</th><th class="n">実績</th><th class="n">実績−作成</th>':'<th class="n real">実績</th>'}<th class="n">実績−パターン</th><th class="n">実績人件費(率)</th><th class="n">25.2%基準 超過${D()?'<br>差額 ÷ 平均時給':''}</th>${D()?'<th class="n">売上 実績 / 下限(実績日分)</th>':''}`;
   t += '</tr></thead><tbody>';
   visibleCodes(ctx).forEach(code => {
     const r = w.stores[code]; if(!r) return;
     const made = r.n_created > 0;
-    t += `<tr class="${r.status==='over_total'?'over':''}"><td class="name"><a href="#wk-${code}" style="color:inherit;text-decoration:none">${esc(r.name)}</a>${groupTag(code, ctx)}</td><td class="make">${wkPill(r)}</td><td class="n">${r.n_created}/7</td><td class="n">${fmtH(made?r.pattern_h:r.pattern_h_all)}</td><td class="n">${made?fmtH(r.actual_h):'—'}${r.recruit_h?`<br><small style="color:var(--ink-3)">募集 ${fmtH(r.recruit_h)}</small>`:''}</td><td class="n" style="color:${made?dcol(r.diff_h):'inherit'}">${made?fmtD(r.diff_h):'—'}</td><td class="n" style="color:${r.over_days.length?'var(--over)':'inherit'}">${made?r.over_days.length+'日':'—'}</td><td class="n">${made?fmtH(r.over_h):'—'}</td><td class="n">${r.shift_rate!=null?fmtY(r.shift_cost)+' <span style="color:var(--ink-3)">('+fmtP(r.shift_rate)+')</span>':'—'}</td><td class="n" style="white-space:nowrap">${fmtY(salesSum(r.days.filter(Boolean)))}<br><small style="color:var(--ink-3)">予算 ${fmtY(r.days.filter(Boolean).reduce((a,d)=>a+(d.budget||0),0))}</small></td>`;
+    t += `<tr class="${r.status==='over_total'?'over':''}"><td class="name"><a href="#wk-${code}" style="color:inherit;text-decoration:none">${esc(r.name)}</a>${groupTag(code, ctx)}</td><td class="make">${wkPill(r)}</td>${D()?`<td class="n">${r.n_created}/7</td>`:''}<td class="n">${fmtH(made?r.pattern_h:r.pattern_h_all)}</td><td class="n">${made?fmtH(r.actual_h):'—'}${r.recruit_h?`<br><small style="color:var(--ink-3)">募集 ${fmtH(r.recruit_h)}</small>`:''}</td><td class="n" style="color:${made?dcol(r.diff_h):'inherit'}">${made?fmtD(r.diff_h):'—'}</td><td class="n" style="color:${r.over_days.length?'var(--over)':'inherit'}">${made?r.over_days.length+'日':'—'}</td>${D()?`<td class="n">${made?fmtH(r.over_h):'—'}</td><td class="n">${r.shift_rate!=null?fmtY(r.shift_cost)+' <span style="color:var(--ink-3)">('+fmtP(r.shift_rate)+')</span>':'—'}</td><td class="n" style="white-space:nowrap">${fmtY(salesSum(r.days.filter(Boolean)))}<br><small style="color:var(--ink-3)">予算 ${fmtY(r.days.filter(Boolean).reduce((a,d)=>a+(d.budget||0),0))}</small></td>`:''}`;
     if (hasReal){
       const rr = r.n_real > 0;
-      t += `<td class="n real">${r.n_real}/${r.n_data}</td><td class="n" style="color:var(--bar-real)">${rr?fmtH(r.real_h):'—'}</td><td class="n" style="color:${rr?dcol(r.real_h_on_shift-r.real_shift_h):'inherit'}">${rr?fmtD(r.real_h_on_shift-r.real_shift_h):'—'}</td><td class="n" style="color:${rr?dcol(r.real_h-r.real_pattern_h):'inherit'}">${rr?fmtD(r.real_h-r.real_pattern_h):'—'}</td><td class="n">${rr?fmtY(r.real_cost)+' <span style="color:var(--ink-3)">('+fmtP(r.real_rate)+')</span>':'—'}</td><td class="n">${rr&&kijunH(r.real_cost, r.real_sales, r.real_h)!=null?fmtKH(r.real_cost, r.real_sales, r.real_h)+'<br><small style="color:var(--ink-3)">'+fmtYD(kijunY(r.real_cost, r.real_sales))+' ÷ '+fmtY(r.real_cost/r.real_h)+'</small>':'—'}</td><td class="n" style="white-space:nowrap">${rr?'<span style="color:var(--bar-real);font-weight:600">'+fmtY(r.real_sales)+'</span><br><small style="color:var(--ink-3)">下限 '+fmtY(salesSum(r.days.filter(Boolean), d=>d.has_real))+'</small>':'—'}</td>`;
+      t += `${D()?`<td class="n real">${r.n_real}/${r.n_data}</td><td class="n" style="color:var(--bar-real)">${rr?fmtH(r.real_h):'—'}</td><td class="n" style="color:${rr?dcol(r.real_h_on_shift-r.real_shift_h):'inherit'}">${rr?fmtD(r.real_h_on_shift-r.real_shift_h):'—'}</td>`:`<td class="n real" style="color:var(--bar-real)">${rr?fmtH(r.real_h):'—'}</td>`}<td class="n" style="color:${rr?dcol(r.real_h-r.real_pattern_h):'inherit'}">${rr?fmtD(r.real_h-r.real_pattern_h):'—'}</td><td class="n">${rr?fmtY(r.real_cost)+' <span style="color:var(--ink-3)">('+fmtP(r.real_rate)+')</span>':'—'}</td><td class="n">${rr&&kijunH(r.real_cost, r.real_sales, r.real_h)!=null?fmtKH(r.real_cost, r.real_sales, r.real_h)+(D()?'<br><small style="color:var(--ink-3)">'+fmtYD(kijunY(r.real_cost, r.real_sales))+' ÷ '+fmtY(r.real_cost/r.real_h)+'</small>':''):'—'}</td>${D()?`<td class="n" style="white-space:nowrap">${rr?'<span style="color:var(--bar-real);font-weight:600">'+fmtY(r.real_sales)+'</span><br><small style="color:var(--ink-3)">下限 '+fmtY(salesSum(r.days.filter(Boolean), d=>d.has_real))+'</small>':'—'}</td>`:''}`;
     }
     t += '</tr>';
   });
@@ -537,17 +546,17 @@ function renderWeekly(){
     const sec = document.createElement('section'); sec.className = 'store'; sec.id = 'wk-'+code;
     let h = `<div class="head"><h3>${esc(r.name)} ${wkPill(r)}</h3>${groupTag(code, ctx)}${TOTOP}</div><div class="stats">`;
     const dd = r.days.filter(Boolean);
-    h += `<span>パターン <b>${fmtH(r.n_created?r.pattern_h:r.pattern_h_all)}</b></span><span>下限売上計 <b>${fmtY(salesSum(dd))}</b></span>`;
-    if (r.n_created) h += `<span class="grp make"><span class="band make">作成時</span><span>作成 <b>${fmtH(r.actual_h)}</b></span><span>差 <b style="color:${dcol(r.diff_h)}">${fmtD(r.diff_h)}</b></span><span>超過日 <b>${r.over_days.length}</b></span><span>予算計 <b>${fmtY(dd.reduce((a,d)=>a+(d.budget||0),0))}</b></span></span>`;
-    if (r.n_real) h += `<span class="grp real"><span class="band real">営業終了後</span><span>実績 <b>${fmtH(r.real_h)}</b>(${r.n_real}日)</span><span>実績−パターン <b style="color:${dcol(r.real_h-r.real_pattern_h)}">${fmtD(r.real_h-r.real_pattern_h)}</b></span><span>人件費率 実績 <b>${fmtP(r.real_rate)}</b> / パターン <b>${fmtP(r.real_pattern_rate)}</b></span><span>25.2%基準 超過 <b>${kijunFull(r.real_cost, r.real_sales, r.real_h)}</b></span><span>売上実績計 <b style="color:var(--bar-real)">${fmtY(r.real_sales)}</b>(同期間の下限計 ${fmtY(salesSum(dd, d=>d.has_real))})</span></span>`;
+    h += `<span>パターン <b>${fmtH(r.n_created?r.pattern_h:r.pattern_h_all)}</b></span>${D()?`<span>下限売上計 <b>${fmtY(salesSum(dd))}</b></span>`:''}`;
+    if (r.n_created) h += `<span class="grp make"><span class="band make">作成時</span><span>作成 <b>${fmtH(r.actual_h)}</b></span><span>差 <b style="color:${dcol(r.diff_h)}">${fmtD(r.diff_h)}</b></span><span>超過日 <b>${r.over_days.length}</b></span>${D()?`<span>予算計 <b>${fmtY(dd.reduce((a,d)=>a+(d.budget||0),0))}</b></span>`:''}</span>`;
+    if (r.n_real) h += `<span class="grp real"><span class="band real">営業終了後</span><span>実績 <b>${fmtH(r.real_h)}</b>(${r.n_real}日)</span><span>実績−パターン <b style="color:${dcol(r.real_h-r.real_pattern_h)}">${fmtD(r.real_h-r.real_pattern_h)}</b></span><span>人件費率 実績 <b>${fmtP(r.real_rate)}</b> / パターン <b>${fmtP(r.real_pattern_rate)}</b></span><span>25.2%基準 超過 <b>${D()?kijunFull(r.real_cost, r.real_sales, r.real_h):fmtKH(r.real_cost, r.real_sales, r.real_h)}</b></span>${D()?`<span>売上実績計 <b style="color:var(--bar-real)">${fmtY(r.real_sales)}</b>(同期間の下限計 ${fmtY(salesSum(dd, d=>d.has_real))})</span>`:''}</span>`;
     h += '</div>';
     const showReal = r.n_real > 0;
     const cdays = r.days.filter(Boolean);
     chartDays[code] = cdays;
     let chartHtml = '';
     if (cdays.some(d => d.has_shift || d.has_real)) chartHtml = `<div class="chart" data-code="${code}">${chart({name:r.name, days:cdays}, true)}</div>`;
-    let b = `<div class="tablewrap"><table><thead><tr class="grp"><th colspan="4" class="base">基準(パターン)</th><th colspan="4" class="make">作成時に確認 ― 作成シフト × パターン</th>${showReal?'<th colspan="5" class="real">営業終了後に確認 ― 勤務実績 × パターン × 作成</th>':''}</tr><tr><th>日</th><th>区分</th><th class="n">パターン</th><th class="n">パターン人件費(率)<br>下限売上</th><th class="n make">作成</th><th class="n">作成−パターン</th><th>過剰 / 不足の時間帯(作成)</th><th class="n">作成予定人件費(率)<br>売上予算</th>`;
-    if (showReal) b += `<th class="n real">実績</th><th class="n">実績−作成</th><th class="n">実績−パターン</th><th>過剰 / 不足の時間帯(実績)</th><th class="n">実績人件費(率)・25.2%比<br>売上実績</th>`;
+    let b = `<div class="tablewrap"><table><thead><tr class="grp"><th colspan="${D()?4:3}" class="base">基準(パターン)</th><th colspan="${D()?4:3}" class="make">作成時に確認 ― 作成シフト × パターン</th>${showReal?`<th colspan="${D()?5:3}" class="real">営業終了後に確認 ― 勤務実績 × パターン × 作成</th>`:''}</tr><tr><th>日</th><th>区分</th><th class="n">パターン</th>${D()?'<th class="n">パターン人件費(率)<br>下限売上</th>':''}<th class="n make">作成</th><th class="n">作成−パターン</th><th>過剰 / 不足の時間帯(作成)</th>${D()?'<th class="n">作成予定人件費(率)<br>売上予算</th>':''}`;
+    if (showReal) b += `<th class="n real">実績</th>${D()?'<th class="n">実績−作成</th>':''}<th class="n">実績−パターン</th>${D()?'<th>過剰 / 不足の時間帯(実績)</th>':''}<th class="n">実績人件費(率)・25.2%比${D()?'<br>売上実績':''}</th>`;
     b += '</tr></thead><tbody>';
     r.days.forEach((d, i) => {
       if (!d){ b += `<tr class="none"><td colspan="13">データなし(その月のチェック結果がまだありません)</td></tr>`; return; }
@@ -555,15 +564,15 @@ function renderWeekly(){
       const nw = 'white-space:nowrap';
       const patCell = `<small style="${nw}">${fmtY(d.pattern_cost)} (${fmtP(d.pattern_rate)})</small><small style="${nw}">下限 ${fmtY(d.pattern_sales)}</small>`;
       const makeCell = `<div style="${nw}">${d.has_shift ? fmtY(d.dinii_cost) + ` <small style="color:var(--ink-3)">(${fmtP(d.dinii_rate)})</small>` : '—'}</div><div style="${nw}">予算 ${fmtY(d.budget)}${d.budget_flag?` <span class="pill warn" title="${esc(d.budget_flag)}">下限割れ</span>`:''}</div>`;
-      b += `<tr class="${cls}"><td>${d.date.slice(5).replace('-','/')}(${d.wd}${d.holiday?'祝':''})</td><td>${d.pattern_daytype}</td><td class="n">${fmtH(d.pattern_h)}</td><td class="n cost">${patCell}</td><td class="n make">${d.has_shift?fmtH(d.actual_h):'未作成'}${d.recruit_h?`<br><small style="color:var(--ink-3)">募集 ${fmtH(d.recruit_h)}</small>`:''}</td><td class="n" style="color:${d.has_shift?dcol(d.diff_h):'inherit'}">${d.has_shift?fmtD(d.diff_h):'—'}</td><td class="ranges">${d.has_shift?rangesHtml(d):'—'}</td><td class="n cost">${makeCell}</td>`;
+      b += `<tr class="${cls}"><td>${d.date.slice(5).replace('-','/')}(${d.wd}${d.holiday?'祝':''})</td><td>${d.pattern_daytype}</td><td class="n">${fmtH(d.pattern_h)}</td>${D()?`<td class="n cost">${patCell}</td>`:''}<td class="n make">${d.has_shift?fmtH(d.actual_h):'未作成'}${d.recruit_h?`<br><small style="color:var(--ink-3)">募集 ${fmtH(d.recruit_h)}</small>`:''}</td><td class="n" style="color:${d.has_shift?dcol(d.diff_h):'inherit'}">${d.has_shift?fmtD(d.diff_h):'—'}</td><td class="ranges">${d.has_shift?rangesHtml(d):'—'}</td>${D()?`<td class="n cost">${makeCell}</td>`:''}`;
       if (showReal){
         let realCell = '—';
         if (d.has_real){
           realCell = `<b style="font-weight:600;${nw}">${fmtY(d.real_cost_detail)} (${fmtP(d.real_rate)})</b>`;
           if (kijunH(d.real_cost_detail,d.real_sales,d.real_h)!=null) realCell += `<small style="${nw}">25.2%比 ${fmtKH(d.real_cost_detail,d.real_sales,d.real_h)}</small>`;
-          realCell += `<small style="${nw};color:var(--bar-real);font-weight:600">売上 ${fmtY(d.real_sales)}</small>`;
+          if (D()) realCell += `<small style="${nw};color:var(--bar-real);font-weight:600">売上 ${fmtY(d.real_sales)}</small>`;
         }
-        b += `<td class="n real" style="color:var(--bar-real)">${d.has_real?fmtH(d.real_h):'—'}</td><td class="n" style="color:${d.real_vs_shift_h!=null?dcol(d.real_vs_shift_h):'inherit'}">${d.real_vs_shift_h!=null?fmtD(d.real_vs_shift_h):'—'}</td><td class="n" style="color:${d.has_real?dcol(d.real_diff_h):'inherit'}">${d.has_real?fmtD(d.real_diff_h):'—'}</td><td class="ranges">${d.has_real?rangesHtml(d,true):'—'}</td><td class="n cost">${realCell}</td>`;
+        b += `<td class="n real" style="color:var(--bar-real)">${d.has_real?fmtH(d.real_h):'—'}</td>${D()?`<td class="n" style="color:${d.real_vs_shift_h!=null?dcol(d.real_vs_shift_h):'inherit'}">${d.real_vs_shift_h!=null?fmtD(d.real_vs_shift_h):'—'}</td>`:''}<td class="n" style="color:${d.has_real?dcol(d.real_diff_h):'inherit'}">${d.has_real?fmtD(d.real_diff_h):'—'}</td>${D()?`<td class="ranges">${d.has_real?rangesHtml(d,true):'—'}</td>`:''}<td class="n cost">${realCell}</td>`;
       }
       b += '</tr>';
     });
