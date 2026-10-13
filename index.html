@@ -94,6 +94,10 @@ section.store .head .totop:hover{background:var(--accent-soft);color:var(--ink)}
 @media (min-width:900px){.tablewrap{overflow-x:visible}}
 .tablewrap.scrollx{overflow-x:auto}  /* 列が多い全店一覧は横スクロールのまま */
 thead th{position:sticky;top:0;background:var(--surface);z-index:2;box-shadow:0 1px 0 var(--line)}
+/* 左端の列(店舗/日)を横スクロール時に固定(2026-10-13ユーザー依頼) */
+table td:first-child,table th:first-child{position:sticky;left:0;background:var(--surface);z-index:1;box-shadow:1px 0 0 var(--line-soft)}
+thead th:first-child{z-index:3;box-shadow:1px 0 0 var(--line-soft),0 1px 0 var(--line)}
+thead tr.grp th:first-child{box-shadow:none}
 /* 「作成時に確認」「営業終了後に確認」の帯(2026-10-13ユーザー依頼) */
 .band{display:inline-block;padding:1px 8px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:.04em;white-space:nowrap;vertical-align:middle;font-style:normal}
 .band.make{background:var(--make-soft);color:var(--make)}
@@ -134,8 +138,8 @@ td{padding:5px 6px;border-bottom:1px solid var(--line-soft);vertical-align:top}
 td:nth-child(1),td:nth-child(2){white-space:nowrap}
 td.cost small{display:block;color:var(--ink-3)}
 td.n,th.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
-tr.over td:first-child{box-shadow:inset 3px 0 0 var(--over)}
-tr.under td:first-child{box-shadow:inset 3px 0 0 var(--under)}
+tr.over td:first-child{box-shadow:inset 3px 0 0 var(--over),1px 0 0 var(--line-soft)}
+tr.under td:first-child{box-shadow:inset 3px 0 0 var(--under),1px 0 0 var(--line-soft)}
 tr.none td{color:var(--ink-3)}
 td.ranges{color:var(--ink-2);font-size:12px;min-width:140px}
 td.ranges .r{display:inline-block;margin:0 8px 2px 0;white-space:nowrap}
