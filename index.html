@@ -39,6 +39,7 @@ h1{font-size:22px;margin:0;font-weight:700;letter-spacing:.01em;text-wrap:balanc
 .tabs::before{content:"表示月";align-self:center;font-size:12px;color:var(--ink-3);margin-right:4px}
 .tab{border:1px solid var(--line);background:var(--surface);color:var(--ink-2);padding:6px 16px;border-radius:999px;font:inherit;font-size:14px;font-weight:500;cursor:pointer}
 .tab[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tab.ext{text-decoration:none;color:var(--accent);border-color:var(--accent)}
 .tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--ink-2);margin-top:14px}
 .legend span{display:inline-flex;align-items:center;gap:6px}
@@ -339,6 +340,14 @@ function renderTabs(){
     t.appendChild(b);
   });
 }
+// レーバーマネジメント(サイト版 labor.html)へのリンクをタブ列の右端に出す(2026-10-27)
+const _renderTabsOrig = renderTabs;
+renderTabs = function(){
+  _renderTabsOrig();
+  const a = document.createElement('a');
+  a.className = 'tab ext'; a.href = 'labor.html'; a.textContent = 'レーバー →'; a.title = 'レーバーマネジメント(プラン・実績・LABOR%)';
+  $('#tabs').appendChild(a);
+};
 
 function renderOverview(m){
   const g = $('#overview'); g.innerHTML='';
