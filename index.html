@@ -490,7 +490,7 @@ function renderStores(m){
           realCell = `<div style="${nw};font-weight:600">${fmtY(rc)} <small style="color:var(--ink-3);font-weight:400">(${fmtP(d.real_rate)})</small></div>`;
           if (D() && rc!=null && d.pattern_cost!=null) realCell += `<div style="${nw}"><span style="color:${dcol(rc-d.pattern_cost)}">${fmtYD(rc-d.pattern_cost)}</span>${d.real_rate!=null&&d.pattern_rate!=null?` <span style="color:${dcol(d.real_rate-d.pattern_rate)}">${fmtPD(d.real_rate-d.pattern_rate)}</span>`:''}</div>`;
           if (kijunH(rc, d.real_sales, d.real_h)!=null) realCell += `<div style="${nw}">25.2%比 ${fmtKH(rc, d.real_sales, d.real_h)}</div>`;
-          if (D()) realCell += `<div style="${nw};color:var(--bar-real);font-weight:600">売上 ${fmtY(d.real_sales)}</div>`;
+          if (D()) realCell += `<div style="${nw};color:var(--bar-real);font-weight:600">売上 ${fmtY(d.real_sales)}</div>${d.real_sales!=null&&d.pattern_sales?`<div style="${nw};font-size:11px;color:${d.real_sales<d.pattern_sales?'var(--over)':'var(--ink-3)'}">下限比 ${fmtYD(d.real_sales-d.pattern_sales)}</div>`:''}`;
         }
         body += `<tr class="${cls}"><td>${d.day}(${d.wd}${d.holiday?'祝':''})</td><td>${d.pattern_daytype}</td><td class="n">${fmtH(d.pattern_h)}</td>${D()?`<td class="n cost">${patCell}</td>`:''}`
           + `<td class="n make">${d.has_shift?fmtH(d.actual_h):'—'}${d.recruit_h?`<br><small style="color:var(--ink-3)">募集 ${fmtH(d.recruit_h)}</small>`:''}</td><td class="n" style="color:${dcol(d.diff_h)}">${d.has_shift?fmtD(d.diff_h):'—'}</td>${D()?`<td class="ranges">${d.has_shift?rangesHtml(d):'—'}</td><td class="n cost">${makeCell}</td>`:''}`
@@ -580,7 +580,7 @@ function renderWeekly(){
         if (d.has_real){
           realCell = `<b style="font-weight:600;${nw}">${fmtY(d.real_cost_detail)} (${fmtP(d.real_rate)})</b>`;
           if (kijunH(d.real_cost_detail,d.real_sales,d.real_h)!=null) realCell += `<small style="${nw}">25.2%比 ${fmtKH(d.real_cost_detail,d.real_sales,d.real_h)}</small>`;
-          if (D()) realCell += `<small style="${nw};color:var(--bar-real);font-weight:600">売上 ${fmtY(d.real_sales)}</small>`;
+          if (D()) realCell += `<small style="${nw};color:var(--bar-real);font-weight:600">売上 ${fmtY(d.real_sales)}</small>${d.real_sales!=null&&d.pattern_sales?`<small style="${nw};color:${d.real_sales<d.pattern_sales?'var(--over)':'var(--ink-3)'}">下限比 ${fmtYD(d.real_sales-d.pattern_sales)}</small>`:''}`;
         }
         b += `<td class="n real" style="color:var(--bar-real)">${d.has_real?fmtH(d.real_h):'—'}</td>${D()?`<td class="n" style="color:${d.real_vs_shift_h!=null?dcol(d.real_vs_shift_h):'inherit'}">${d.real_vs_shift_h!=null?fmtD(d.real_vs_shift_h):'—'}</td>`:''}<td class="n" style="color:${d.has_real?dcol(d.real_diff_h):'inherit'}">${d.has_real?fmtD(d.real_diff_h):'—'}</td>${D()?`<td class="ranges">${d.has_real?rangesHtml(d,true):'—'}</td>`:''}<td class="n cost">${realCell}</td>`;
       }
